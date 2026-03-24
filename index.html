@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>副木請購系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3248;
+    --accent: #4f8ef7;
+    --accent2: #7c6af7;
+    --green: #3dd68c;
+    --amber: #f5a623;
+    --red: #f76f6f;
+    --text: #e8eaf6;
+    --text2: #8890b0;
+    --text3: #555e80;
+    --tag-eco: #b5451b;
+    --tag-orfit: #7c4da0;
+    --tag-strap: #2e6ea6;
+    --tag-afo: #1e7c5a;
+    --tag-aqua: #2e7ca6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .logo-text { font-size: 15px; font-weight: 700; letter-spacing: 0.05em; }
+  .logo-sub { font-size: 11px; color: var(--text2); letter-spacing: 0.08em; margin-top: 1px; }
+
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .badge-count {
+    background: var(--accent);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+    padding: 3px 9px;
+    border-radius: 20px;
+    display: none;
+  }
+  .badge-count.show { display: inline-block; }
+
+  /* ── Layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 0;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .cart-panel { position: static !important; }
+  }
+
+  /* ── Section ── */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .section-header {
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+  }
+  .section-header:hover { background: var(--surface2); }
+  .supplier-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .section-sub { font-size: 12px; color: var(--text2); margin-left: auto; }
+  .chevron {
+    margin-left: 8px;
+    color: var(--text3);
+    font-size: 12px;
+    transition: transform 0.2s;
+  }
+  .section.collapsed .chevron { transform: rotate(-90deg); }
+  .section.collapsed .section-body { display: none; }
+
+  .section-body { padding: 8px 0; }
+
+  /* ── Product Row ── */
+  .product-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    gap: 12px;
+    transition: background 0.12s;
+    cursor: pointer;
+  }
+  .product-row:hover { background: var(--surface2); }
+  .product-row.selected { background: rgba(79, 142, 247, 0.08); }
+
+  .checkbox {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 5px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    font-size: 11px;
+  }
+  .product-row.selected .checkbox {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .product-info { flex: 1; min-width: 0; }
+  .product-name { font-size: 13px; font-weight: 500; }
+  .product-hint { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .product-note { font-size: 11px; color: var(--amber); margin-top: 2px; }
+
+  .proc-code {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  /* Qty control */
+  .qty-control {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .qty-btn {
+    width: 28px; height: 28px;
+    background: var(--surface2);
+    border: none;
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s;
+  }
+  .qty-btn:hover { background: var(--border); }
+  .qty-val {
+    width: 36px;
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    outline: none;
+    padding: 0;
+  }
+
+  /* Sub-options */
+  .sub-options {
+    padding: 6px 20px 8px 50px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .sub-opt {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.12s;
+    color: var(--text2);
+    background: var(--surface2);
+  }
+  .sub-opt.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(79,142,247,0.1);
+  }
+
+  /* ── Cart Panel ── */
+  .cart-panel {
+    position: sticky;
+    top: 80px;
+  }
+
+  .cart-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .cart-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cart-title {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .cart-clear {
+    font-size: 11px; color: var(--text3);
+    cursor: pointer; padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .cart-clear:hover { color: var(--red); border-color: var(--red); }
+
+  .cart-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text3);
+    font-size: 13px;
+  }
+  .cart-empty-icon { font-size: 32px; margin-bottom: 10px; opacity: 0.4; }
+
+  .cart-items { max-height: 400px; overflow-y: auto; padding: 8px 0; }
+  .cart-item {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cart-item:last-child { border-bottom: none; }
+  .cart-item-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .cart-item-name { font-size: 13px; font-weight: 500; flex: 1; }
+  .cart-item-remove {
+    color: var(--text3); font-size: 14px; cursor: pointer;
+    padding: 0 2px;
+    transition: color 0.12s;
+  }
+  .cart-item-remove:hover { color: var(--red); }
+  .cart-item-detail { font-size: 11px; color: var(--text2); margin-top: 3px; }
+  .cart-item-code {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-top: 4px;
+  }
+
+  /* Output */
+  .cart-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .btn-generate {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: opacity 0.15s, transform 0.12s;
+  }
+  .btn-generate:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-generate:active { transform: translateY(0); }
+
+  /* Output modal */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .modal-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-size: 14px; font-weight: 700; }
+  .modal-close {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { background: var(--surface2); }
+
+  .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+
+  .output-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    color: var(--text);
+  }
+
+  .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 10px;
+  }
+  .btn-copy {
+    flex: 1;
+    padding: 11px;
+    background: var(--green);
+    color: #0f1117;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-copy:hover { opacity: 0.85; }
+  .btn-copy.copied { background: var(--text2); }
+
+  .btn-vendor {
+    flex: 1;
+    padding: 11px;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-vendor:hover { background: var(--border); }
+
+  /* Vendor modal */
+  .vendor-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .vendor-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .vendor-name { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .vendor-items { font-size: 12px; color: var(--text2); margin-bottom: 10px; line-height: 1.8; }
+  .vendor-msg-preview {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--text);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    margin-top: 8px;
+  }
+  .btn-copy-vendor {
+    margin-top: 10px;
+    padding: 7px 14px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .btn-copy-vendor:hover { background: rgba(79,142,247,0.1); }
+
+  /* Color codes */
+  .c-orfitd { background: rgba(181,69,27,0.2); color: #e8845a; }
+  .c-orfita { background: rgba(124,77,160,0.2); color: #b08adc; }
+  .c-wzstr { background: rgba(46,110,166,0.2); color: #6aabdc; }
+  .c-ropafo { background: rgba(30,124,90,0.2); color: #5dc9a2; }
+  .c-aquapa { background: rgba(46,124,166,0.2); color: #5ab8dc; }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🦴</div>
+    <div>
+      <div class="logo-text">副木請購系統</div>
+      <div class="logo-sub">Splint Procurement Tool</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <span class="badge-count" id="headerCount">0 項已選</span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- Left: Product list -->
+  <div>
+
+    <!-- 高健 / Eco Orfit -->
+    <div class="section" id="sec-gaojian">
+      <div class="section-header" onclick="toggleSection('gaojian')">
+        <div class="supplier-dot" style="background:#e8845a"></div>
+        <div>
+          <div class="section-title">高健</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:1px;">Orfit / Eco 系列</div>
+        </div>
+        <div class="section-sub">ORFITD · ORFITA · WZSTR</div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="section-body" id="body-gaojian">
+
+        <!-- ORFITD group -->
+        <div style="padding:6px 20px 2px; font-size:10px; font-weight:700; letter-spacing:0.1em; color:var(--text3); text-transform:uppercase;">Eco — ORFITD（一次下4片）</div>
+
+        <div class="product-row" id="row-post-afo-m" onclick="toggleProduct('post-afo-m')">
+          <div class="checkbox" id="chk-post-afo-m"></div>
+          <div class="product-info">
+            <div class="product-name">中的 post.AFO (M)</div>
+            <div class="product-hint">1片 ORFITD → 4支</div>
+          </div>
+          <span class="proc-code c-orfitd">ORFITD</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('post-afo-m',-1)">−</button>
+            <input class="qty-val" id="qty-post-afo-m" value="1" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('post-afo-m',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-kushion" onclick="toggleProduct('kushion')">
+          <div class="checkbox" id="chk-kushion"></div>
+          <div class="product-info">
+            <div class="product-name">KUSION</div>
+            <div class="product-hint">1片 ORFITD → 1盒</div>
+          </div>
+          <span class="proc-code c-orfitd">ORFITD</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('kushion',-1)">−</button>
+            <input class="qty-val" id="qty-kushion" value="1" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('kushion',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-elastic-band" onclick="toggleProduct('elastic-band')">
+          <div class="checkbox" id="chk-elastic-band"></div>
+          <div class="product-info">
+            <div class="product-name">白色彈性黏扣帶</div>
+            <div class="product-hint">1片 ORFITD → 2捲</div>
+          </div>
+          <span class="proc-code c-orfitd">ORFITD</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('elastic-band',-1)">−</button>
+            <input class="qty-val" id="qty-elastic-band" value="1" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('elastic-band',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-velcro-back" onclick="toggleProduct('velcro-back')">
+          <div class="checkbox" id="chk-velcro-back"></div>
+          <div class="product-info">
+            <div class="product-name">黏扣帶有背膠</div>
+            <div class="product-hint">1片 ORFITD → 5捲（粉紅/翠綠/水藍…）</div>
+          </div>
+          <span class="proc-code c-orfitd">ORFITD</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('velcro-back',-1)">−</button>
+            <input class="qty-val" id="qty-velcro-back" value="1" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('velcro-back',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-scissors" onclick="toggleProduct('scissors')">
+          <div class="checkbox" id="chk-scissors"></div>
+          <div class="product-info">
+            <div class="product-name">直剪</div>
+            <div class="product-hint">1片 ORFITD → 1把</div>
+          </div>
+          <span class="proc-code c-orfitd">ORFITD</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('scissors',-1)">−</button>
+            <input class="qty-val" id="qty-scissors" value="1" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('scissors',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-moleskin" onclick="toggleProduct('moleskin')">
+          <div class="checkbox" id="chk-moleskin"></div>
+          <div class="product-info">
+            <div class="product-name">moleskin</div>
+            <div class="product-hint">1片 ORFITD → 1盒</div>
+          </div>
+          <span class="proc-code c-orfitd">ORFITD</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('moleskin',-1)">−</button>
+            <input class="qty-val" id="qty-moleskin" value="1" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('moleskin',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-resting" onclick="toggleProduct('resting')">
+          <div class="checkbox" id="chk-resting"></div>
+          <div class="product-info">
+            <div class="product-name">Resting splint</div>
+            <div class="product-hint">1片 ORFITD → 4隻（Eco 大拇指側）</div>
+            <div class="product-note">⚠ 需備註左/右</div>
+          </div>
+          <span class="proc-code c-orfitd">ORFITD</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('resting',-1)">−</button>
+            <input class="qty-val" id="qty-resting" value="1" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('resting',1)">+</button>
+          </div>
+        </div>
+        <!-- Resting side options -->
+        <div class="sub-options" id="sub-resting" style="display:none">
+          <div class="sub-opt" onclick="toggleSubOpt('resting','L','左手')">左手</div>
+          <div class="sub-opt" onclick="toggleSubOpt('resting','R','右手')">右手</div>
+          <div class="sub-opt" onclick="toggleSubOpt('resting','LR','左+右')">左+右各半</div>
+        </div>
+
+        <div class="divider" style="margin:8px 20px;"></div>
+        <div style="padding:6px 20px 2px; font-size:10px; font-weight:700; letter-spacing:0.1em; color:var(--text3); text-transform:uppercase;">Orfit — ORFITA（一次下4片）</div>
+
+        <div class="product-row" id="row-cockup-s" onclick="toggleProduct('cockup-s')">
+          <div class="checkbox" id="chk-cockup-s"></div>
+          <div class="product-info">
+            <div class="product-name">cock-up 小（Aqua）</div>
+            <div class="product-hint">1片 ORFITA → 10支</div>
+          </div>
+          <span class="proc-code c-orfita">ORFITA</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('cockup-s',-1)">−</button>
+            <input class="qty-val" id="qty-cockup-s" value="1" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('cockup-s',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-cockup-m" onclick="toggleProduct('cockup-m')">
+          <div class="checkbox" id="chk-cockup-m"></div>
+          <div class="product-info">
+            <div class="product-name">cock-up 中（Aqua）</div>
+            <div class="product-hint">1片 ORFITA → 8支</div>
+          </div>
+          <span class="proc-code c-orfita">ORFITA</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('cockup-m',-1)">−</button>
+            <input class="qty-val" id="qty-cockup-m" value="1" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('cockup-m',1)">+</button>
+          </div>
+        </div>
+
+        <div class="divider" style="margin:8px 20px;"></div>
+        <div style="padding:6px 20px 2px; font-size:10px; font-weight:700; letter-spacing:0.1em; color:var(--text3); text-transform:uppercase;">Strap（一次要下100條）</div>
+
+        <div class="product-row" id="row-strap-m" onclick="toggleProduct('strap-m')">
+          <div class="checkbox" id="chk-strap-m"></div>
+          <div class="product-info">
+            <div class="product-name">Strap 中</div>
+            <div class="product-hint">WZSTR10 · 100條/次</div>
+            <div class="product-note">⚠ 需跟廠商說明：公+母款</div>
+          </div>
+          <span class="proc-code c-wzstr">WZSTR10</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('strap-m',-1)">−</button>
+            <input class="qty-val" id="qty-strap-m" value="100" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('strap-m',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-strap-l" onclick="toggleProduct('strap-l')">
+          <div class="checkbox" id="chk-strap-l"></div>
+          <div class="product-info">
+            <div class="product-name">Strap 大</div>
+            <div class="product-hint">WZSTR15 · 100條/次</div>
+          </div>
+          <span class="proc-code c-wzstr">WZSTR15</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('strap-l',-1)">−</button>
+            <input class="qty-val" id="qty-strap-l" value="100" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('strap-l',1)">+</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 吉特 -->
+    <div class="section" id="sec-jite">
+      <div class="section-header" onclick="toggleSection('jite')">
+        <div class="supplier-dot" style="background:#5dc9a2"></div>
+        <div>
+          <div class="section-title">吉特</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:1px;">Post. AFO 系列</div>
+        </div>
+        <div class="section-sub">ROPAFO1</div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="section-body" id="body-jite">
+        <div style="padding:6px 20px 2px; font-size:10px; font-weight:700; letter-spacing:0.1em; color:var(--text3); text-transform:uppercase;">Post. AFO — ROPAFO1（一次下10支）</div>
+
+        <div class="product-row" id="row-afo-pink" onclick="toggleProduct('afo-pink')">
+          <div class="checkbox" id="chk-afo-pink"></div>
+          <div class="product-info">
+            <div class="product-name">3.2 粉（Post. AFO）</div>
+            <div class="product-hint">10支 → 1盒</div>
+          </div>
+          <span class="proc-code c-ropafo">ROPAFO1</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('afo-pink',-1)">−</button>
+            <input class="qty-val" id="qty-afo-pink" value="10" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('afo-pink',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-afo-hole" onclick="toggleProduct('afo-hole')">
+          <div class="checkbox" id="chk-afo-hole"></div>
+          <div class="product-info">
+            <div class="product-name">KS-3219A（洞洞）</div>
+            <div class="product-hint">10支 → 1盒</div>
+          </div>
+          <span class="proc-code c-ropafo">ROPAFO1</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('afo-hole',-1)">−</button>
+            <input class="qty-val" id="qty-afo-hole" value="10" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('afo-hole',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-afo-white" onclick="toggleProduct('afo-white')">
+          <div class="checkbox" id="chk-afo-white"></div>
+          <div class="product-info">
+            <div class="product-name">4.0 白色厚的 (P4001A)</div>
+            <div class="product-hint">10支 → 1盒</div>
+          </div>
+          <span class="proc-code c-ropafo">ROPAFO1</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('afo-white',-1)">−</button>
+            <input class="qty-val" id="qty-afo-white" value="10" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('afo-white',1)">+</button>
+          </div>
+        </div>
+
+        <div class="product-row" id="row-afo-large" onclick="toggleProduct('afo-large')">
+          <div class="checkbox" id="chk-afo-large"></div>
+          <div class="product-info">
+            <div class="product-name">Post. AFO 大支 S/L</div>
+            <div class="product-hint">10支 → 1盒</div>
+            <div class="product-note">⚠ L size 需特別跟廠商說明</div>
+          </div>
+          <span class="proc-code c-ropafo">ROPAFO1</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('afo-large',-1)">−</button>
+            <input class="qty-val" id="qty-afo-large" value="10" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('afo-large',1)">+</button>
+          </div>
+        </div>
+        <!-- Size sub-options -->
+        <div class="sub-options" id="sub-afo-large" style="display:none">
+          <div class="sub-opt" onclick="toggleSubOpt('afo-large','S','S size')">S size</div>
+          <div class="sub-opt" onclick="toggleSubOpt('afo-large','L','L size（需告知廠商）')">L size</div>
+          <div class="sub-opt" onclick="toggleSubOpt('afo-large','SL','S+L 各半')">S+L 各半</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 盛聯 -->
+    <div class="section" id="sec-shenglian">
+      <div class="section-header" onclick="toggleSection('shenglian')">
+        <div class="supplier-dot" style="background:#5ab8dc"></div>
+        <div>
+          <div class="section-title">盛聯（磊信貨）</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:1px;">Ant. AFO 系列</div>
+        </div>
+        <div class="section-sub">AQUAPA</div>
+        <span class="chevron">▾</span>
+      </div>
+      <div class="section-body" id="body-shenglian">
+        <div style="padding:6px 20px 2px; font-size:10px; font-weight:700; letter-spacing:0.1em; color:var(--text3); text-transform:uppercase;">Ant. AFO — AQUAPA（一次下4片）</div>
+
+        <div class="product-row" id="row-ant-afo" onclick="toggleProduct('ant-afo')">
+          <div class="checkbox" id="chk-ant-afo"></div>
+          <div class="product-info">
+            <div class="product-name">Ant. AFO（磊信 AAFO）</div>
+            <div class="product-hint">4片 AQUAPA → 磊信20支（水藍+膚色各半）</div>
+          </div>
+          <span class="proc-code c-aquapa">AQUAPA</span>
+          <div class="qty-control" onclick="event.stopPropagation()">
+            <button class="qty-btn" onclick="changeQty('ant-afo',-1)">−</button>
+            <input class="qty-val" id="qty-ant-afo" value="4" min="1" readonly>
+            <button class="qty-btn" onclick="changeQty('ant-afo',1)">+</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right: Cart -->
+  <div class="cart-panel">
+    <div class="cart-section">
+      <div class="cart-header">
+        <div class="cart-title">請購清單</div>
+        <div class="cart-clear" onclick="clearAll()">清空</div>
+      </div>
+
+      <div id="cartEmpty" class="cart-empty">
+        <div class="cart-empty-icon">📋</div>
+        <div>勾選左側品項加入清單</div>
+      </div>
+
+      <div id="cartItems" class="cart-items" style="display:none"></div>
+
+      <div class="cart-footer" id="cartFooter" style="display:none">
+        <button class="btn-generate" onclick="showOutput()">
+          🔖 產出請購單
+        </button>
+        <button class="btn-generate" style="background:linear-gradient(135deg,#3a8a6a,#2e7aa6)" onclick="showVendor()">
+          💬 產出廠商訊息
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Output Modal -->
+<div class="modal-overlay" id="outputModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📋 請購單（複製後貼至醫院系統）</div>
+      <button class="modal-close" onclick="closeModal('outputModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="output-block" id="outputText"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-copy" id="copyBtn" onclick="copyOutput()">複製全部</button>
+      <button class="btn-vendor" onclick="closeModal('outputModal')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vendor Modal -->
+<div class="modal-overlay" id="vendorModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">💬 廠商聯絡訊息</div>
+      <button class="modal-close" onclick="closeModal('vendorModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="vendor-info" id="vendorInfo"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-vendor" onclick="closeModal('vendorModal')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Data ───────────────────────────────────────────────────────────────────
+const PRODUCTS = {
+  'post-afo-m':  { name:'中的 post.AFO (M)',         code:'ORFITD', supplier:'高健', unit:'支', ratio:4, per:1, perUnit:'片', note:'' },
+  'kushion':     { name:'KUSION',                    code:'ORFITD', supplier:'高健', unit:'盒', ratio:1, per:1, perUnit:'片', note:'' },
+  'elastic-band':{ name:'白色彈性黏扣帶',            code:'ORFITD', supplier:'高健', unit:'捲', ratio:2, per:1, perUnit:'片', note:'' },
+  'velcro-back': { name:'黏扣帶有背膠（粉/綠/藍）', code:'ORFITD', supplier:'高健', unit:'捲', ratio:5, per:1, perUnit:'片', note:'' },
+  'scissors':    { name:'直剪',                      code:'ORFITD', supplier:'高健', unit:'把', ratio:1, per:1, perUnit:'片', note:'' },
+  'moleskin':    { name:'moleskin',                  code:'ORFITD', supplier:'高健', unit:'盒', ratio:1, per:1, perUnit:'片', note:'' },
+  'resting':     { name:'Resting splint (Eco)',      code:'ORFITD', supplier:'高健', unit:'隻', ratio:4, per:1, perUnit:'片', note:'需備註左右手', hasSubOpt:true },
+  'cockup-s':    { name:'cock-up 小（Aqua）',        code:'ORFITA', supplier:'高健', unit:'支', ratio:10, per:1, perUnit:'片', note:'' },
+  'cockup-m':    { name:'cock-up 中（Aqua）',        code:'ORFITA', supplier:'高健', unit:'支', ratio:8, per:1, perUnit:'片', note:'' },
+  'strap-m':     { name:'Strap 中',                  code:'WZSTR10', supplier:'高健', unit:'條', ratio:1, per:1, perUnit:'條', note:'需告知廠商：公+母款', defaultQty:100 },
+  'strap-l':     { name:'Strap 大',                  code:'WZSTR15', supplier:'高健', unit:'條', ratio:1, per:1, perUnit:'條', note:'', defaultQty:100 },
+  'afo-pink':    { name:'3.2 粉（Post. AFO）',       code:'ROPAFO1', supplier:'吉特', unit:'支', ratio:10, per:10, perUnit:'支', note:'' },
+  'afo-hole':    { name:'KS-3219A（洞洞）',          code:'ROPAFO1', supplier:'吉特', unit:'支', ratio:10, per:10, perUnit:'支', note:'' },
+  'afo-white':   { name:'4.0 白色厚的 (P4001A)',     code:'ROPAFO1', supplier:'吉特', unit:'支', ratio:10, per:10, perUnit:'支', note:'' },
+  'afo-large':   { name:'Post. AFO 大支',            code:'ROPAFO1', supplier:'吉特', unit:'支', ratio:10, per:10, perUnit:'支', note:'L size 需特別告知廠商', hasSubOpt:true },
+  'ant-afo':     { name:'Ant. AFO（磊信 AAFO）',     code:'AQUAPA',  supplier:'盛聯(磊信)', unit:'支', ratio:20, per:4, perUnit:'片', note:'水藍+膚色各半', defaultQty:4 },
+};
+
+const selected = {}; // id -> { qty, subOpt }
+const subOpts = {};  // id -> selected sub option label
+
+// ─── Toggle product ──────────────────────────────────────────────────────────
+function toggleProduct(id) {
+  if (selected[id]) {
+    delete selected[id];
+    delete subOpts[id];
+  } else {
+    const p = PRODUCTS[id];
+    selected[id] = { qty: p.defaultQty || 1 };
+  }
+  updateRow(id);
+  renderCart();
+}
+
+function updateRow(id) {
+  const row = document.getElementById('row-' + id);
+  const chk = document.getElementById('chk-' + id);
+  const subEl = document.getElementById('sub-' + id);
+  if (selected[id]) {
+    row.classList.add('selected');
+    chk.textContent = '✓';
+    if (subEl) subEl.style.display = 'flex';
+  } else {
+    row.classList.remove('selected');
+    chk.textContent = '';
+    if (subEl) subEl.style.display = 'none';
+  }
+}
+
+function changeQty(id, delta) {
+  if (!selected[id]) {
+    selected[id] = { qty: PRODUCTS[id].defaultQty || 1 };
+    updateRow(id);
+  }
+  const p = PRODUCTS[id];
+  const step = p.defaultQty && p.defaultQty > 1 ? (delta > 0 ? p.defaultQty : -p.defaultQty) : delta;
+  let newQty = (selected[id].qty || 1) + step;
+  if (p.per > 1) {
+    newQty = Math.max(p.per, Math.round(newQty / p.per) * p.per);
+  } else {
+    newQty = Math.max(1, newQty);
+  }
+  selected[id].qty = newQty;
+  document.getElementById('qty-' + id).value = newQty;
+  renderCart();
+}
+
+function toggleSubOpt(id, val, label) {
+  subOpts[id] = subOpts[id] === label ? null : label;
+  // Update UI
+  const container = document.getElementById('sub-' + id);
+  if (container) {
+    container.querySelectorAll('.sub-opt').forEach(el => {
+      el.classList.toggle('active', el.textContent === label && subOpts[id]);
+    });
+  }
+  renderCart();
+}
+
+// ─── Render cart ─────────────────────────────────────────────────────────────
+function renderCart() {
+  const ids = Object.keys(selected);
+  const empty = document.getElementById('cartEmpty');
+  const items = document.getElementById('cartItems');
+  const footer = document.getElementById('cartFooter');
+  const badge = document.getElementById('headerCount');
+
+  if (ids.length === 0) {
+    empty.style.display = 'block';
+    items.style.display = 'none';
+    footer.style.display = 'none';
+    badge.classList.remove('show');
+    return;
+  }
+
+  empty.style.display = 'none';
+  items.style.display = 'block';
+  footer.style.display = 'flex';
+  badge.textContent = ids.length + ' 項已選';
+  badge.classList.add('show');
+
+  items.innerHTML = ids.map(id => {
+    const p = PRODUCTS[id];
+    const qty = selected[id].qty;
+    const pieces = Math.ceil(qty / p.ratio);
+    const procQty = p.code.startsWith('WZSTR') ? qty : (p.per > 1 ? Math.ceil(qty / p.per) : pieces);
+    const subNote = subOpts[id] ? `（${subOpts[id]}）` : '';
+    const codeClass = 'c-' + p.code.toLowerCase().replace(/\d+/g,'');
+
+    let detail = '';
+    if (p.code === 'ORFITD' || p.code === 'ORFITA') {
+      detail = `請購 ${pieces} 片 ${p.code} → 換 ${qty} ${p.unit}`;
+    } else if (p.code === 'ROPAFO1') {
+      detail = `請購 ${procQty} 次（${qty} 支）${p.code}`;
+    } else if (p.code === 'WZSTR10' || p.code === 'WZSTR15') {
+      detail = `請購 ${qty} 條 ${p.code}`;
+    } else if (p.code === 'AQUAPA') {
+      detail = `請購 ${pieces} 片 ${p.code} → 磊信 ${pieces * 5} 支`;
+    }
+
+    return `<div class="cart-item">
+      <div class="cart-item-row">
+        <div class="cart-item-name">${p.name}${subNote}</div>
+        <div class="cart-item-remove" onclick="removeItem('${id}')">✕</div>
+      </div>
+      <div class="cart-item-detail">${detail}</div>
+      <span class="cart-item-code ${codeClass}">${p.code}</span>
+      ${p.note ? `<div style="font-size:10px;color:var(--amber);margin-top:4px;">⚠ ${p.note}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function removeItem(id) {
+  delete selected[id];
+  delete subOpts[id];
+  updateRow(id);
+  renderCart();
+}
+
+function clearAll() {
+  Object.keys(selected).forEach(id => { delete selected[id]; updateRow(id); });
+  Object.keys(subOpts).forEach(id => delete subOpts[id]);
+  renderCart();
+}
+
+// ─── Generate output ─────────────────────────────────────────────────────────
+function showOutput() {
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
+  let lines = [`副木請購單  ${dateStr}`, `${'─'.repeat(36)}`];
+
+  // Group by code
+  const byCode = {};
+  Object.keys(selected).forEach(id => {
+    const p = PRODUCTS[id];
+    if (!byCode[p.code]) byCode[p.code] = [];
+    byCode[p.code].push(id);
+  });
+
+  Object.keys(byCode).forEach(code => {
+    lines.push('');
+    lines.push(`【${code}】`);
+    byCode[code].forEach(id => {
+      const p = PRODUCTS[id];
+      const qty = selected[id].qty;
+      const subNote = subOpts[id] ? `（${subOpts[id]}）` : '';
+      const pieces = Math.ceil(qty / p.ratio);
+
+      let line = '';
+      if (code === 'ORFITD' || code === 'ORFITA') {
+        line = `  ${p.name}${subNote}  ×${pieces} 片`;
+      } else if (code === 'ROPAFO1') {
+        line = `  ${p.name}${subNote}  ×${qty} 支`;
+      } else if (code.startsWith('WZSTR')) {
+        line = `  ${p.name}  ×${qty} 條`;
+      } else if (code === 'AQUAPA') {
+        line = `  ${p.name}  ×${pieces} 片`;
+      }
+      if (p.note) line += `\n    ⚠ ${p.note}`;
+      lines.push(line);
+    });
+  });
+
+  lines.push('');
+  lines.push(`${'─'.repeat(36)}`);
+  lines.push(`共 ${Object.keys(selected).length} 品項`);
+
+  document.getElementById('outputText').textContent = lines.join('\n');
+  document.getElementById('outputModal').classList.add('show');
+}
+
+function showVendor() {
+  const vendors = {};
+  Object.keys(selected).forEach(id => {
+    const p = PRODUCTS[id];
+    if (!vendors[p.supplier]) vendors[p.supplier] = [];
+    vendors[p.supplier].push(id);
+  });
+
+  const container = document.getElementById('vendorInfo');
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()}`;
+
+  container.innerHTML = Object.keys(vendors).map(supplier => {
+    const ids = vendors[supplier];
+    let msg = `您好，我是職治科，想訂以下副木材料：\n\n`;
+
+    ids.forEach(id => {
+      const p = PRODUCTS[id];
+      const qty = selected[id].qty;
+      const subNote = subOpts[id] ? `（${subOpts[id]}）` : '';
+      const pieces = Math.ceil(qty / p.ratio);
+
+      if (p.code === 'ORFITD' || p.code === 'ORFITA') {
+        msg += `・${p.name}${subNote} — ${pieces} 片（${p.code}）\n`;
+      } else if (p.code === 'ROPAFO1') {
+        msg += `・${p.name}${subNote} — ${qty} 支（${p.code}）\n`;
+        if (subOpts[id] && subOpts[id].includes('L')) {
+          msg += `  ※ 含 L size，請特別確認\n`;
+        }
+      } else if (p.code.startsWith('WZSTR')) {
+        msg += `・${p.name} — ${qty} 條（${p.code}）`;
+        if (p.note) msg += `\n  ※ ${p.note}`;
+        msg += '\n';
+      } else if (p.code === 'AQUAPA') {
+        const totalPcs = Math.ceil(qty / p.ratio) * 5;
+        msg += `・Ant. AFO${subNote} — ${Math.ceil(qty / p.ratio)} 片 AQUAPA\n  → 需磊信 AAFO ${totalPcs} 支（水藍+膚色各半）\n`;
+      }
+    });
+
+    msg += `\n麻煩確認後回覆，謝謝！`;
+
+    return `<div class="vendor-card">
+      <div class="vendor-name">📦 ${supplier}</div>
+      <div class="vendor-msg-preview">${msg}</div>
+      <button class="btn-copy-vendor" onclick="copyText(this, \`${msg.replace(/`/g,'\\`')}\`)">複製訊息</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('vendorModal').classList.add('show');
+}
+
+function copyOutput() {
+  const text = document.getElementById('outputText').textContent;
+  copyText(document.getElementById('copyBtn'), text);
+}
+
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ 已複製';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+function toggleSection(id) {
+  document.getElementById('sec-' + id).classList.toggle('collapsed');
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('show'); });
+});
+</script>
+</body>
+</html>
