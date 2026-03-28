@@ -455,7 +455,27 @@
   </div>
 </div>
 
-<!-- 廠商訊息 Modal -->
+<!-- Notion 摘要 Modal -->
+<div class="modal-overlay" id="notionCopyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📒 Notion 採購摘要</div>
+      <button class="modal-close" onclick="closeModal('notionCopyModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:0.75rem;color:var(--text2);line-height:1.7;">
+        可以直接複製貼給 Claude 幫你存入，或自己對照填入 Notion。
+      </div>
+      <div class="output-block" id="notionSummaryText" style="font-size:0.82rem;line-height:1.9;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-copy" id="notionCopyBtn" onclick="copyNotionSummary()">複製</button>
+      <button class="btn-close" onclick="closeModal('notionCopyModal')">關閉</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="vendor-overlay" id="vendorModal">
   <div class="vendor-modal">
     <div class="vendor-modal-header">
@@ -834,6 +854,16 @@ function showVendor(){
 function copyVendor(btn,text){
   navigator.clipboard.writeText(text).then(()=>{ const o=btn.textContent; btn.textContent='✓ 已複製'; setTimeout(()=>btn.textContent=o,2000); });
 }
+function copyNotionSummary() {
+  const text = document.getElementById('notionSummaryText').innerText;
+  const btn = document.getElementById('notionCopyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ 已複製';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '複製'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
 function copyOutput(){
   const text=document.getElementById('outputText').innerText;
   const btn=document.getElementById('copyBtn');
@@ -860,113 +890,48 @@ document.getElementById('vendorModal').addEventListener('click', e=>{
   if(e.target===document.getElementById('vendorModal')) closeVendorModal();
 });
 
-// ── Notion 同步 ───────────────────────────────────────────────────────────────
-async function syncToNotion() {
-  const btn = document.getElementById('notionBtn');
+// ── Notion 摘要（只顯示最終拿到的品項與數量）────────────────────────────────
+function syncToNotion() {
   const ids = Object.keys(sel);
   if (!ids.length) return;
 
-  btn.textContent = '⏳ 同步中…';
-  btn.disabled = true;
-
-  // 建立每個品項的紀錄說明
   const today = new Date();
   const ds = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
 
-  // 組成給 Claude API 的指令，讓它用 Notion MCP 新增紀錄
-  const items = ids.map(id => {
+  const lines = [`📦 採購紀錄  ${ds}`, ''];
+
+  ids.forEach(id => {
     const p = P[id];
     const qty = sel[id];
-    const sh = rawSheetsForId(id);
-    let qtyLabel = '';
-    let exchangeNote = '';
+    const sn = sizeOpt[id] ? `（${sizeOpt[id]}）` : '';
+    let finalQty = '';
 
     if (p.type === 'resting') {
-      const tot = rLR.left + rLR.right;
-      qtyLabel = String(tot);
-      exchangeNote = `${Math.ceil(tot/4)}片ORFITD→${tot}隻（左${rLR.left}右${rLR.right}）`;
+      if (rLR.left && rLR.right) {
+        finalQty = `左手 ${rLR.left} 隻、右手 ${rLR.right} 隻`;
+      } else if (rLR.left) {
+        finalQty = `左手 ${rLR.left} 隻`;
+      } else {
+        finalQty = `右手 ${rLR.right} 隻`;
+      }
     } else if (p.type === 'eco' || p.type === 'orfita') {
-      qtyLabel = String(qty);
-      exchangeNote = `${sh}片${p.code}→${qty}${p.unit}`;
+      finalQty = `${qty} ${p.unit}`;
     } else if (p.type === 'strap') {
-      qtyLabel = String(qty);
-      exchangeNote = `${qty}條`;
+      finalQty = `${qty} 條`;
     } else if (p.type === 'afo') {
-      qtyLabel = String(qty);
-      exchangeNote = `${qty}支（${qty/p.boxPer}盒）`;
+      finalQty = `${qty} 支（${qty / p.boxPer} 盒）`;
     } else if (p.type === 'aqua') {
-      qtyLabel = String(qty);
-      exchangeNote = `${qty}片AQUAPA→磊信${(qty/4)*20}支`;
+      const pcs = (qty / 4) * 20;
+      finalQty = `${pcs} 支（水藍+膚色各半）`;
     }
 
-    // 數量欄位對應（select 選項）
-    const validQtys = ['1','4','5','10','16','20','100','200','300'];
-    const qtySelect = validQtys.includes(qtyLabel) ? qtyLabel : null;
-
-    return {
-      name: p.name,
-      code: p.code,
-      supplier: p.sup,
-      qty: qtyLabel,
-      qtySelect,
-      exchangeNote,
-      recordTitle: `${ds}－${p.name}`
-    };
+    lines.push(`• ${p.name}${sn}　${finalQty}`);
   });
 
-  const prompt = `請幫我在 Notion 資料庫「採購明細（一項一單）」（data_source_id: 88befddd-64fd-4429-a2d2-cf05b2839948）新增以下採購紀錄，每個品項一筆，欄位如下：
-
-${items.map((item, i) => `
-【第${i+1}筆】
-- 記錄（title）：${item.recordTitle}
-- 兌換說明：${item.exchangeNote}
-- 數量（select）：${item.qtySelect || '（此數量無對應選項，請填備註）'}
-- 備註：${!item.qtySelect ? `數量${item.qty}` : ''}
-- 狀態：未勾選（__NO__）
-`).join('')}
-
-請逐一建立，完成後告訴我建立了幾筆。`;
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        mcp_servers: [{
-          type: 'url',
-          url: 'https://mcp.notion.com/mcp',
-          name: 'notion-mcp'
-        }],
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-
-    const data = await response.json();
-    const resultText = (data.content || [])
-      .filter(b => b.type === 'text')
-      .map(b => b.text)
-      .join('');
-
-    btn.textContent = `✓ 已存入 Notion（${ids.length} 筆）`;
-    btn.style.background = 'linear-gradient(135deg,#3dd68c,#2e7aa6)';
-    setTimeout(() => {
-      btn.textContent = '📒 儲存到 Notion';
-      btn.style.background = 'linear-gradient(135deg,#2d2d2d,#1a1a2e)';
-      btn.disabled = false;
-    }, 3000);
-
-  } catch(err) {
-    btn.textContent = '❌ 同步失敗，請重試';
-    btn.style.background = 'var(--red)';
-    btn.disabled = false;
-    console.error(err);
-    setTimeout(() => {
-      btn.textContent = '📒 儲存到 Notion';
-      btn.style.background = 'linear-gradient(135deg,#2d2d2d,#1a1a2e)';
-    }, 3000);
-  }
+  const text = lines.join('\n');
+  document.getElementById('notionSummaryText').textContent = text;
+  document.getElementById('notionCopyModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
 }
 </script>
 </body>
